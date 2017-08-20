@@ -6,4 +6,4 @@ authors = ["Charles Katzer <cpkatzer@gmail.com>"]
 [dependencies]
 pancurses = "0.9"
 rand = "0.3"
-random_derive = "0.1"
+rand_derive = "0.3"

@@ -1,5 +1,5 @@
 #[macro_use]
-extern crate random_derive;
+extern crate rand_derive;
 extern crate pancurses;
 extern crate rand;
 
@@ -39,7 +39,7 @@ fn move_cursor(direction: Direction, window: &Window) {
     window.refresh();
 }
 
-#[derive(RandTrait)]
+#[derive(Rand)]
 enum Shape {
     Dot,
     Cross,
@@ -58,7 +58,7 @@ enum Shape {
     // }
 // }
 
-#[derive(RandTrait)]
+#[derive(Rand)]
 enum Path {
     Up,
     Down,
@@ -160,7 +160,7 @@ impl Meteor {
 
 
 impl Rand for Meteor {
-    // We could use #[derive(RandTrait)], but we need to limit y and x
+    // We could use #[derive(Rand)], but we need to limit y and x
     fn rand<R: Rng>(rng: &mut R) -> Meteor {
         Meteor {
             y: rand::random::<i32>().abs() % 40,
