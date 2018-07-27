@@ -1,13 +1,9 @@
-#[macro_use]
-extern crate rand_derive;
 extern crate pancurses;
 extern crate rand;
 
-use pancurses::{initscr, endwin, Input, noecho, Window, ToChtype};
-
-use rand::{Rand, Rng};
-
-// Note: terminal needs to be 84x40
+use pancurses::{endwin, initscr, noecho, Input, ToChtype, Window};
+use rand::Rng;
+use rand::distributions::{Distribution, Standard};
 
 enum Direction {
     Up,
@@ -20,45 +16,41 @@ fn move_cursor(direction: Direction, window: &Window) {
     let (y, x) = window.get_cur_yx();
     match direction {
         Direction::Up => {
-            let new_y = y-1;
+            let new_y = y - 1;
             window.mv(new_y, x);
         }
         Direction::Down => {
-            let new_y = y+1;
+            let new_y = y + 1;
             window.mv(new_y, x);
         }
         Direction::Left => {
-            let new_x = x-1;
+            let new_x = x - 1;
             window.mv(y, new_x);
         }
         Direction::Right => {
-            let new_x = x+1;
+            let new_x = x + 1;
             window.mv(y, new_x);
         }
     }
     window.refresh();
 }
 
-#[derive(Rand)]
 enum Shape {
     Dot,
     Cross,
     X,
 }
 
-// impl Rand for Shape {
-    // fn rand<R: Rng>(rng: &mut R) -> Shape {
-        // let r: u64 = rand::random::<u64>() % 3;
-        // match r {
-            // 0 => Shape::Dot,
-            // 1 => Shape::Cross,
-            // 2 => Shape::X,
-            // _ => Shape::Dot,
-        // }
-    // }
-// }
+impl Distribution<Shape> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Shape {
+        match rng.gen_range(0, 3) {
+            0 => Shape::Dot,
+            1 => Shape::Cross,
+            _ => Shape::X,
+        }
+    }
+}
 
-#[derive(Rand)]
 enum Path {
     Up,
     Down,
@@ -70,23 +62,20 @@ enum Path {
     DownRight,
 }
 
-// impl Rand for Path {
-    // fn rand<R: Rng>(rng: &mut R) -> Path {
-        // let r = rand::random::<u8>() % 8;
-        // match r {
-            // 0 => Path::Up,
-            // 1 => Path::Down,
-            // 2 => Path::Left,
-            // 3 => Path::Right,
-            // 4 => Path::UpLeft,
-            // 5 => Path::UpRight,
-            // 6 => Path::DownLeft,
-            // 7 => Path::DownRight,
-            // _ => Path::Up,
-        // }
-    // }
-// }
-
+impl Distribution<Path> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Path {
+        match rng.gen_range(0, 8) {
+            0 => Path::Up,
+            1 => Path::Down,
+            2 => Path::Left,
+            3 => Path::Right,
+            4 => Path::UpLeft,
+            5 => Path::UpRight,
+            6 => Path::DownLeft,
+            _ => Path::DownRight,
+        }
+    }
+}
 
 struct Meteor {
     y: i32,
@@ -95,28 +84,47 @@ struct Meteor {
     path: Path,
 }
 
+impl Distribution<Meteor> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, _rng: &mut R) -> Meteor {
+        Meteor {
+            y: rand::random(),
+            x: rand::random(),
+            shape: rand::random(),
+            path: rand::random(),
+        }
+    }
+}
+
 impl Meteor {
     fn update(&mut self) {
         match self.path {
-            Path::Up => { self.y -= 1; }
-            Path::Down => { self.y += 1; }
-            Path::Left => { self.x -= 1; }
-            Path::Right => { self.x += 1; }
-            Path::UpLeft => { 
-                self.y -= 1; 
-                self.x -= 1; 
+            Path::Up => {
+                self.y -= 1;
             }
-            Path::UpRight => { 
-                self.y -= 1; 
-                self.x += 1; 
+            Path::Down => {
+                self.y += 1;
             }
-            Path::DownLeft => { 
-                self.y += 1; 
-                self.x -= 1; 
+            Path::Left => {
+                self.x -= 1;
             }
-            Path::DownRight => { 
-                self.y += 1; 
-                self.x += 1; 
+            Path::Right => {
+                self.x += 1;
+            }
+            Path::UpLeft => {
+                self.y -= 1;
+                self.x -= 1;
+            }
+            Path::UpRight => {
+                self.y -= 1;
+                self.x += 1;
+            }
+            Path::DownLeft => {
+                self.y += 1;
+                self.x -= 1;
+            }
+            Path::DownRight => {
+                self.y += 1;
+                self.x += 1;
             }
         }
     }
@@ -131,17 +139,17 @@ impl Meteor {
             }
             Shape::Cross => {
                 window.mvprintw(self.y, self.x, character);
-                window.mvprintw(self.y-1, self.x, character);
-                window.mvprintw(self.y+1, self.x, character);
-                window.mvprintw(self.y, self.x-1, character);
-                window.mvprintw(self.y, self.x+1, character);
+                window.mvprintw(self.y - 1, self.x, character);
+                window.mvprintw(self.y + 1, self.x, character);
+                window.mvprintw(self.y, self.x - 1, character);
+                window.mvprintw(self.y, self.x + 1, character);
             }
             Shape::X => {
                 window.mvprintw(self.y, self.x, character);
-                window.mvprintw(self.y-1, self.x-1, character);
-                window.mvprintw(self.y+1, self.x-1, character);
-                window.mvprintw(self.y-1, self.x+1, character);
-                window.mvprintw(self.y+1, self.x+1, character);
+                window.mvprintw(self.y - 1, self.x - 1, character);
+                window.mvprintw(self.y + 1, self.x - 1, character);
+                window.mvprintw(self.y - 1, self.x + 1, character);
+                window.mvprintw(self.y + 1, self.x + 1, character);
             }
         }
         // Restore cursor coordinates
@@ -158,22 +166,13 @@ impl Meteor {
     }
 }
 
-
-impl Rand for Meteor {
-    // We could use #[derive(Rand)], but we need to limit y and x
-    fn rand<R: Rng>(rng: &mut R) -> Meteor {
-        Meteor {
-            y: rand::random::<i32>().abs() % 40,
-            x: rand::random::<i32>().abs() % 85,
-            shape: rand::random(),
-            path: rand::random(),
-        }
-    }
-}
-
 fn update_meteors(meteors: &mut Vec<Meteor>, window: &Window) {
     // Add a meteor
-    meteors.push(rand::random::<Meteor>());
+    let (max_y, max_x) = window.get_max_yx();
+    let mut new_meteor = rand::random::<Meteor>();
+    new_meteor.y = ((new_meteor.y % max_y) + max_y) % max_y;
+    new_meteor.x = ((new_meteor.x % max_x) + max_x) % max_x;
+    meteors.push(new_meteor);
 
     // Erase the meteors, update the positions, and re-draw
     for meteor in meteors.iter() {
@@ -187,12 +186,13 @@ fn update_meteors(meteors: &mut Vec<Meteor>, window: &Window) {
     }
 }
 
-fn remove_and_replace_meteors(meteors: &mut Vec<Meteor>) {
+fn remove_and_replace_meteors(meteors: &mut Vec<Meteor>, window: &Window) {
     // Remove out-of-bound meteors and replace with new ones
     // If any meteors move out of bounds, stop tracking them
+    let (max_y, max_x) = window.get_max_yx();
     let mut to_remove: Vec<usize> = Vec::new();
     for (i, m) in meteors.iter().enumerate() {
-        if (m.x == -1)|(m.x == 85)|(m.y == -1)|(m.y == 40) {
+        if (m.x == -1) | (m.x == max_x) | (m.y == -1) | (m.y == max_y) {
             to_remove.push(i);
         }
     }
@@ -211,7 +211,11 @@ fn remove_and_replace_meteors(meteors: &mut Vec<Meteor>) {
     for _ in 0..count {
         // Meteors added at this stage will be "out" for a round, but will
         // be drawn in with the players next move
-        meteors.push(rand::random::<Meteor>());
+        let (max_y, max_x) = window.get_max_yx();
+        let mut new_meteor = rand::random::<Meteor>();
+        new_meteor.y = ((new_meteor.y % max_y) + max_y) % max_y;
+        new_meteor.x = ((new_meteor.x % max_x) + max_x) % max_x;
+        meteors.push(new_meteor);
     }
 }
 
@@ -220,61 +224,61 @@ fn cursor_is_hit(window: &Window) -> bool {
     let (y, x) = window.get_cur_yx();
     let meteor_piece = '*'.to_chtype();
     if window.mvinch(y, x) == meteor_piece {
-        return true
+        return true;
     }
-    return false
+    return false;
 }
 
 fn main() {
     let window = initscr();
-    window.border('|', '|', '-', '-', ',', ',', '\'', '\'',);
-    // let (max_y, max_x) = window.get_max_yx();
+    window.border('|', '|', '-', '-', ',', ',', '\'', '\'');
+    let (max_y, max_x) = window.get_max_yx();
     window.printw("vi keys to move, 'q' to quit, new meteor with every move");
-    window.mv(19, 42);
+    window.mv(max_y / 2, max_x / 2);
     window.refresh();
     window.keypad(true);
     noecho();
 
     let mut score: usize = 0;
 
-    let mut meteors = vec![
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-        rand::random::<Meteor>(),
-    ];
+    let mut meteors = Vec::new();
 
     loop {
         match window.getch() {
             Some(Input::Character('q')) => break,
-            Some(Input::Character('k')) => { move_cursor(Direction::Up, &window); },
-            Some(Input::Character('j')) => { move_cursor(Direction::Down, &window); },
-            Some(Input::Character('h')) => { move_cursor(Direction::Left, &window); },
-            Some(Input::Character('l')) => { move_cursor(Direction::Right, &window); },
+            Some(Input::Character('k')) => {
+                move_cursor(Direction::Up, &window);
+            }
+            Some(Input::Character('j')) => {
+                move_cursor(Direction::Down, &window);
+            }
+            Some(Input::Character('h')) => {
+                move_cursor(Direction::Left, &window);
+            }
+            Some(Input::Character('l')) => {
+                move_cursor(Direction::Right, &window);
+            }
+            Some(Input::KeyResize) => {
+                pancurses::resize_term(0, 0);
+            }
             Some(_) => (),
             None => (),
         }
 
         // Check to see if cursor was hit before meteors move
         if cursor_is_hit(&window) {
-            break
+            break;
         }
 
         // Update all meteor positions
         update_meteors(&mut meteors, &window);
-        
+
         // Remove old meteors and create new ones
-        remove_and_replace_meteors(&mut meteors);
+        remove_and_replace_meteors(&mut meteors, &window);
 
         // Check to see if cursor was hit after meteors move
         if cursor_is_hit(&window) {
-            break
+            break;
         }
 
         score += 1;
